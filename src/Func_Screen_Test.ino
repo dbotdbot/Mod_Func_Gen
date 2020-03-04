@@ -331,6 +331,7 @@ void menuNav(int x, int y, int *m){
     }
     if(subMenu[0] > 2){
       sum = sum * 1000000;
+      subMenu[0] = 2;
     }
 
   frequency = sum;
