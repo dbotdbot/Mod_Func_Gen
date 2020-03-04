@@ -170,14 +170,6 @@ void loop() {
   
   menuNav(xPotVal, yPotVal, menu);
   
-  //tft.invertDisplay(true);
-  //delay(500);
-  //tft.invertDisplay(false);
-  // digitalWrite(ledPin1, HIGH);
-  // delay(500);
-  // digitalWrite(ledPin1, LOW);
-  // delay(500);
-
   if(funcOn){
     setOutput(frequency, waveType);
   }
@@ -190,25 +182,8 @@ void loop() {
   }
 
   ltoa(frequency1,buffer,10);
-  
-  //drawtext_line3(buffer, ST77XX_RED);
-
-
-  //drawScreen(screen, waveType, outputVoltage, outputCurrentLimit, frequency, pkVoltage, dcOffset);
-
 
   writeScreen(menu, waveType, outputVoltage, outputCurrentLimit, frequency, pkVoltage, dcOffset);
-  
-  Serial.println(buffer);
-  Serial.print("X pot = ");
-  Serial.print("\t");
-  xPotVal = analogRead(potX);
-  Serial.println(xPotVal);
-  Serial.print("Y pot = ");
-  Serial.print("\t");
-  yPotVal = analogRead(potY);
-  Serial.println(yPotVal);
-
   
 }
 
@@ -228,11 +203,6 @@ void menuNav(int x, int y, int *m){
   int yPlus = 2000;
   int yMinus = 500;
 
-  Serial.println("In Nav Function");
-  Serial.print("M [0] = ");
-  Serial.println(m[0]);
-  Serial.print("M [1] = ");
-  Serial.println(m[1]);
 
   if(!activated){
     Serial.println("Not activated");
@@ -299,7 +269,7 @@ void menuNav(int x, int y, int *m){
       if((menu[0] == 1)&&(menu[1] == 2)){
         //adjust frequency
         const int xPosMin = 0;
-        const int xPosMax = 4;
+        const int xPosMax = 5;
         const int decMax = 9;
         const int decMin = 0;
         static int xpos = 0;
@@ -340,30 +310,27 @@ void menuNav(int x, int y, int *m){
         //Determine Freq value based on digits displayed
     int multiplyer = 1;
     int sum = 0;
-    // for(int x = subMenuLeng; x > -1; x--){
-    //   Serial.print("submenu ");
-    //   Serial.println(x);
-    //   Serial.println(subMenu[x]);
-    // }
+   
 
-    for(int x = subMenuLeng; x > 0; x--){
-      // delay(1000);
-      // Serial.print("x = ");
-      // Serial.println(x);
-
-      // Serial.print("submenu[subMenuLeng - x = ");
-      // Serial.println(subMenu[subMenuLeng - x]);
-
-      // delay(1000);
-      // Serial.print("Sum ");
-      // Serial.println(sum);
-      // Serial.print("Mulpiplayer = ");
-      // Serial.println(multiplyer);
+    for(int x = (subMenuLeng - 1); x > 0; x--){
       sum = sum + (subMenu[subMenuLeng - x] * multiplyer);
       multiplyer = multiplyer * 10;
-      // Serial.print("Summmmmmnmm ");
-      // Serial.println(sum);
-     
+    }
+    switch(subMenu[0]){
+      case 0:
+        //hz selected
+        //no need to adjust
+        break;
+      case 1:
+        //kHz selected
+        sum = sum * 1000;
+        break;
+      case 2:
+        //mHz selected
+        sum = sum * 1000000;
+    }
+    if(subMenu[0] > 2){
+      sum = sum * 1000000;
     }
 
   frequency = sum;
@@ -434,6 +401,7 @@ void writeScreen(int *m, int waveType, long outputVolt, long currentLimit, long 
 }
 
 void drawVoltSourceScreen(long outputVolt, long currentLimit){
+    //Voltage Source Screen 
     tft.fillScreen(ST77XX_BLACK);
     tft.setTextColor(ST7735_GREEN);
     tft.setTextSize(1);
@@ -448,7 +416,7 @@ void drawVoltSourceScreen(long outputVolt, long currentLimit){
     tft.print("Source");
     tft.drawRect(85,10,75,25,ST7735_WHITE);
 
-    
+    //Create and display values for Voltage and current limit
     tft.setCursor(10, 55);
     tft.setTextSize(2);
     ltoa(outputVolt,buffer,10);
@@ -461,6 +429,7 @@ void drawVoltSourceScreen(long outputVolt, long currentLimit){
 }
 
 void drawFuncGenScreen(int *m, int waveType, long freq, long pkVolt, long dcOffset){
+    //Display function Generator Screen
     tft.fillScreen(ST77XX_BLACK);
     tft.setTextColor(ST7735_GREEN);
     tft.setTextSize(1);
@@ -504,9 +473,41 @@ void drawFuncGenScreen(int *m, int waveType, long freq, long pkVolt, long dcOffs
 
     tft.setCursor(10,90);
     tft.print("Frequency = ");
-    sprintf(buffer, "%0.5d", freq);
+    //adjust number to write based on units selected
+    long dispFreq = freq;
+    if(subMenu[0] == 1){
+      // Divide by 1000
+      dispFreq = freq / 1000;
+      Serial.print("Div by 1000");
+    }
+    else if(subMenu[0] >= 2){
+      //divide by 1000000
+      dispFreq = freq / 1000000;
+      Serial.print("Div by 1000000");
+    }
+
+    Serial.print("Disp Freq =");
+    Serial.println(dispFreq);
+
+    sprintf(buffer, "%0.4d", dispFreq);
     tft.print(buffer);
-    
+    switch(subMenu[0]){
+      case 0:
+      //Hertz
+      tft.print("Hz");
+      break;
+      case 1:
+      //kHz
+      tft.print("KHz");
+      break;
+      case 2:
+      //MHz
+      tft.print("MHz");
+      break;
+    }
+    if(subMenu[0] > 2){
+      tft.print("MHz");
+    }
 
 
     //Red Boxes for Freq and Wave select (Menu[2] - 0 = none selected, 1 = Wave selected, 2 = Freq selected)
@@ -536,10 +537,17 @@ void drawFuncGenScreen(int *m, int waveType, long freq, long pkVolt, long dcOffs
       //Changing WaveType
       tft.drawRect(75,74,62,12, ST7735_RED);
     }
-    if(activated && (m[1]) == 2){
-      //draw rect around indiviual digits
+    if((activated && (m[1]) == 2) && (menu[2] != 0)){
+      //draw rect around indiviual digits as long as not on the Units digit
+      //int xoffset = 80 + 24 - (6*m[2]);
       int xoffset = 80 + 24 - (6*m[2]);
+
       tft.drawRect(xoffset, 89, 8, 11, ST7735_RED);
+    }
+    if((activated && (m[1]) == 2) && (menu[2] == 0)){
+      //Draw rectangle around the units digit
+      int xoffset = 80 + 24;
+      tft.drawRect(xoffset, 89, 24, 11, ST7735_RED);
     }
 }
 
