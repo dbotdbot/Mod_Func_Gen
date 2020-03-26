@@ -167,19 +167,22 @@ void loop() {
   currentLimADC = analogRead(currentLimPin);
 
   calcPots(dcOffsetADC, pkVoltADC, voltADC, currentLimADC);
+  Serial.print("DC offset value = ");
+  Serial.println(dcOffset);
   
   menuNav(xPotVal, yPotVal, menu);
+  
+  //delay(500);
+  //Serial.print("Freq = ");
+  //Serial.println(frequency);
   
   if(funcOn){
     setOutput(frequency, waveType);
   }
-  
-  delay(1500);
-
-  frequency1 += 500;
-  if(frequency1 > 2000){
-    frequency1 = 100;
+  else{
+    setOutputOff();
   }
+  
 
   ltoa(frequency1,buffer,10);
 
@@ -188,11 +191,13 @@ void loop() {
 }
 
 
-void calcPots(int dcOffset, int pkVolt, int volt, int currentLim){
+void calcPots(int dcOffsetADC, int pkVolt, int volt, int currentLim){
   outputVoltage = (long)volt;
   outputCurrentLimit = (long)currentLim;
-  pkVoltage = (long)pkVolt;
-  dcOffset = (long)dcOffset;
+  //pk-pk voltage = -0.00581(ADC value) + 25
+  pkVoltage = -0.00581*(long)pkVolt + 25;
+  //offset voltage = -0.00549(ADC value) + 10.4
+  dcOffset = -0.00549*(long)dcOffsetADC + 10.4;
 }
 
 void menuNav(int x, int y, int *m){
@@ -205,58 +210,59 @@ void menuNav(int x, int y, int *m){
 
 
   if(!activated){
-    Serial.println("Not activated");
+    //Serial.println("Not activated");
     if(x > xPlus){
-       Serial.println("X Pot High");
+       //Serial.println("X Pot High");
       //increment menu x coordinate if not at max
       m[0] += 1;
       if(m[0] >= xMax){
         m[0] = xMax;
-        Serial.println("Increment menu x");
+        //Serial.println("Increment menu x");
       }
     }
     else if(x < xMinus){
-      Serial.println("X Pot Low");
+      //Serial.println("X Pot Low");
       //decrement menu x coordinate if not at minimum
       m[0] -= 1;
       if(m[0] <= 0){
         m[0] = 0;
-        Serial.println("Decrement menu x");
+        //Serial.println("Decrement menu x");
       }
     }
     if(y > yPlus){
-      Serial.println("Y Pot High");
+      //Serial.println("Y Pot High");
       //increment menu y coordinate if not at max
       m[1] += 1;
       if(m[1] >= yMax){
        m[1] = yMax;
-       Serial.println("Increment menu y");
+       //Serial.println("Increment menu y");
       }
     }
     else if(y < yMinus){
-      Serial.println("Y Pot Low");
+      //Serial.println("Y Pot Low");
       //decrement menu y coordinate if not at minimum
       m[1] -= 1;
       if(menu[1] <= 0){
        m[1] = 0;
-       Serial.println("Decrement meny y");
+       //Serial.println("Decrement meny y");
       }
     }
+    delay(500);
   }
 
-  Serial.print("M Variable x = ");
-  Serial.println(m[0]);
+  //Serial.print("M Variable x = ");
+  //Serial.println(m[0]);
 
   if(activated){
     //Joystick button has been pressed while on freq or wavetype
-      Serial.println("Sub menu activated");
-      Serial.print("m[1] = ");
-      Serial.println(m[1]);
-      Serial.print("m[2] = ");
-      Serial.println(m[2]);
+      //Serial.println("Sub menu activated");
+      //Serial.print("m[1] = ");
+      //Serial.println(m[1]);
+      //Serial.print("m[2] = ");
+      //Serial.println(m[2]);
       if((menu[0] == 1)&&(menu[1] == 1)){
         //Select Wavetype
-        Serial.print("in waveType selection");
+        //Serial.print("in waveType selection");
         if((y > yPlus)||(x > xPlus)){
           waveType +=1;
           if(waveType > 2){waveType = 0;}
@@ -289,23 +295,23 @@ void menuNav(int x, int y, int *m){
 
         //adjust submenu components
         if(y > yPlus){
-          Serial.print("Before addition subMenu[menu[2]] = ");
-          Serial.println(subMenu[menu[2]]);
+          //Serial.print("Before addition subMenu[menu[2]] = ");
+          //Serial.println(subMenu[menu[2]]);
           subMenu[menu[2]] += 1;
-          Serial.print("After addition subMenu[menu[2]] = ");
-          Serial.println(subMenu[menu[2]]);
+          //Serial.print("After addition subMenu[menu[2]] = ");
+          //Serial.println(subMenu[menu[2]]);
           if(subMenu[menu[2]] > decMax){subMenu[menu[2]] = decMax;} 
-          Serial.print("After max subMenu[menu[2]] = ");
-          Serial.println(subMenu[menu[2]]);
+          //Serial.print("After max subMenu[menu[2]] = ");
+          //Serial.println(subMenu[menu[2]]);
         }
         if(y < yMinus){
           subMenu[menu[2]] -= 1;
           if(subMenu[menu[2]] < decMin){subMenu[menu[2]] = decMin;}
         }
-        Serial.print("menu[2] = ");
-        Serial.println(menu[2]);
-        Serial.print("subMenu[menu[2]] = ");
-        Serial.println(subMenu[menu[2]]);
+        //Serial.print("menu[2] = ");
+        //Serial.println(menu[2]);
+        //Serial.print("subMenu[menu[2]] = ");
+        //Serial.println(subMenu[menu[2]]);
       }
         //Determine Freq value based on digits displayed
     int multiplyer = 1;
@@ -335,8 +341,7 @@ void menuNav(int x, int y, int *m){
     }
 
   frequency = sum;
-  Serial.print("Freq = ");
-  Serial.println(frequency);
+
   //set new frequency
   }  
 
@@ -379,6 +384,10 @@ void setOutput(long frequency, int waveForm){
   sigGen.mode(waveForm);
   sigGen.reset(0);
   //digitalWrite(FYSNC_Pin, HIGH);
+}
+
+void setOutputOff(){
+  sigGen.reset(1);
 }
 
 void writeScreen(int *m, int waveType, long outputVolt, long currentLimit, long freq, long pkVolt, long dcOffset){
@@ -479,16 +488,16 @@ void drawFuncGenScreen(int *m, int waveType, long freq, long pkVolt, long dcOffs
     if(subMenu[0] == 1){
       // Divide by 1000
       dispFreq = freq / 1000;
-      Serial.print("Div by 1000");
+      //Serial.print("Div by 1000");
     }
     else if(subMenu[0] >= 2){
       //divide by 1000000
       dispFreq = freq / 1000000;
-      Serial.print("Div by 1000000");
+      //Serial.print("Div by 1000000");
     }
 
-    Serial.print("Disp Freq =");
-    Serial.println(dispFreq);
+    //Serial.print("Disp Freq =");
+    //Serial.println(dispFreq);
 
     sprintf(buffer, "%0.4d", dispFreq);
     tft.print(buffer);
@@ -513,23 +522,23 @@ void drawFuncGenScreen(int *m, int waveType, long freq, long pkVolt, long dcOffs
 
     //Red Boxes for Freq and Wave select (Menu[2] - 0 = none selected, 1 = Wave selected, 2 = Freq selected)
     
-    Serial.println("Determine Y menu pos");
-    Serial.print("m[1] = ");
-    Serial.println(m[1]);
+    //Serial.println("Determine Y menu pos");
+    //Serial.print("m[1] = ");
+    //Serial.println(m[1]);
     if(!activated){
       switch(m[1]){
         case 0:
           //nothing selected
-          Serial.println("Do nothing");
+          //Serial.println("Do nothing");
           break;
         case 1:
          //WaveType selected
-         Serial.println("Draw rec around Wave Type");
+         //Serial.println("Draw rec around Wave Type");
          tft.drawRect(5, 74, 62, 12, ST7735_RED);
          break;
         case 2:
           //Frequency Selected
-          Serial.println("Draw Rec around Freq");
+          //Serial.println("Draw Rec around Freq");
           tft.drawRect(5, 89, 62, 12, ST7735_RED);
           break;
       }
